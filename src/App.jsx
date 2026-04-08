@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { arrayUnion, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { PROFILE_COLLECTION, ROOM_COLLECTION, auth, db, firebaseEnabled } from './lib/firebase';
+import authShowcaseImage from './assets/fit-bet-hero-people.jpg';
 
 const CACHE_KEY = 'fit-bet-room-cache';
 const ROOM_STORAGE_KEY = 'fit-bet-room-code';
@@ -24,6 +25,7 @@ const SIDE_OPTIONS = [
   { value: 'pink', label: 'Pink Side', emoji: '\uD83D\uDC96' },
   { value: 'blue', label: 'Blue Side', emoji: '\uD83D\uDC99' },
 ];
+const AUTH_SHOWCASE_IMAGE = authShowcaseImage;
 const HERO_SHOWCASE_IMAGE =
   'https://images.pexels.com/photos/3822726/pexels-photo-3822726.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
@@ -393,7 +395,7 @@ function AuthPage({
       <section className="auth-layout">
         <div
           className="auth-showcase"
-          style={{ '--auth-showcase-image': `url(${HERO_SHOWCASE_IMAGE})` }}
+          style={{ '--auth-showcase-image': `url(${AUTH_SHOWCASE_IMAGE})` }}
         >
           <div className="auth-orb auth-orb-pink" aria-hidden="true" />
           <div className="auth-orb auth-orb-blue" aria-hidden="true" />

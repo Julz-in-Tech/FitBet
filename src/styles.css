@@ -194,6 +194,10 @@ button {
 .auth-showcase {
   padding: 2rem;
   border-radius: 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.75rem;
   background:
     linear-gradient(145deg, rgba(26, 18, 52, 0.84), rgba(51, 27, 95, 0.56) 42%, rgba(22, 44, 92, 0.48)),
     radial-gradient(circle at top left, rgba(255, 115, 201, 0.3), transparent 28%),
@@ -496,6 +500,10 @@ button {
   border: 1px solid rgba(221, 208, 255, 0.2);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
+}
+
+.auth-tabs + .panel-kicker {
+  margin-top: 1rem;
 }
 
 .auth-tab {
