@@ -6,13 +6,14 @@ import {
   signOut,
   updateProfile,
 } from 'firebase/auth';
-import { arrayUnion, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
+import { arrayUnion, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { PROFILE_COLLECTION, ROOM_COLLECTION, auth, db, firebaseEnabled } from './lib/firebase';
 import authShowcaseImage from './assets/fit-bet-hero-people.jpg';
 
 const CACHE_KEY = 'fit-bet-room-cache';
 const ROOM_STORAGE_KEY = 'fit-bet-room-code';
 const MONTHLY_ALERT_STORAGE_PREFIX = 'fit-bet-monthly-alert';
+const MONTHS_SUBCOLLECTION = 'months';
 const RATE = 10;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const EMPTY_WORKOUT_ENTRY = Object.freeze({
@@ -85,6 +86,62 @@ function generateRoomCode() {
   return code;
 }
 
+function normalizeMonthEntries(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {};
+  }
+
+  const nextMonth = {};
+
+  for (const [dayKey, dayValue] of Object.entries(raw)) {
+    if (!dayValue || typeof dayValue !== 'object' || Array.isArray(dayValue)) {
+      continue;
+    }
+
+    const nextDay = {};
+
+    for (const [uid, checked] of Object.entries(dayValue)) {
+      if (checked === true) {
+        nextDay[uid] = {
+          workedOut: true,
+          arrivalTime: '',
+          leaveTime: '',
+          weightKg: '',
+        };
+        continue;
+      }
+
+      if (checked && typeof checked === 'object' && !Array.isArray(checked)) {
+        const arrivalTime = typeof checked.arrivalTime === 'string' ? checked.arrivalTime : '';
+        const leaveTime = typeof checked.leaveTime === 'string' ? checked.leaveTime : '';
+        const rawWeight =
+          typeof checked.weightKg === 'string' || typeof checked.weightKg === 'number'
+            ? checked.weightKg
+            : typeof checked.weight === 'string' || typeof checked.weight === 'number'
+              ? checked.weight
+              : '';
+        const weightKg = rawWeight === '' ? '' : String(rawWeight);
+        const workedOut = typeof checked.workedOut === 'boolean' ? checked.workedOut : false;
+
+        if (workedOut || arrivalTime || leaveTime || weightKg) {
+          nextDay[uid] = {
+            workedOut,
+            arrivalTime,
+            leaveTime,
+            weightKg,
+          };
+        }
+      }
+    }
+
+    if (Object.keys(nextDay).length > 0) {
+      nextMonth[dayKey] = nextDay;
+    }
+  }
+
+  return nextMonth;
+}
+
 function normalizeCalendarData(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return {};
@@ -97,57 +154,7 @@ function normalizeCalendarData(raw) {
       continue;
     }
 
-    const nextMonth = {};
-
-    for (const [dayKey, dayValue] of Object.entries(monthValue)) {
-      if (!dayValue || typeof dayValue !== 'object' || Array.isArray(dayValue)) {
-        continue;
-      }
-
-      const nextDay = {};
-
-      for (const [uid, checked] of Object.entries(dayValue)) {
-        if (checked === true) {
-          nextDay[uid] = {
-            workedOut: true,
-            arrivalTime: '',
-            leaveTime: '',
-            weightKg: '',
-          };
-          continue;
-        }
-
-        if (checked && typeof checked === 'object' && !Array.isArray(checked)) {
-          const arrivalTime =
-            typeof checked.arrivalTime === 'string' ? checked.arrivalTime : '';
-          const leaveTime =
-            typeof checked.leaveTime === 'string' ? checked.leaveTime : '';
-          const rawWeight =
-            typeof checked.weightKg === 'string' || typeof checked.weightKg === 'number'
-              ? checked.weightKg
-              : typeof checked.weight === 'string' || typeof checked.weight === 'number'
-                ? checked.weight
-                : '';
-          const weightKg =
-            rawWeight === '' ? '' : String(rawWeight);
-          const workedOut = 
-            typeof checked.workedOut === 'boolean' ? checked.workedOut : false;
-
-          if (workedOut || arrivalTime || leaveTime || weightKg) {
-            nextDay[uid] = {
-              workedOut,
-              arrivalTime,
-              leaveTime,
-              weightKg,
-            };
-          }
-        }
-      }
-
-      if (Object.keys(nextDay).length > 0) {
-        nextMonth[dayKey] = nextDay;
-      }
-    }
+    const nextMonth = normalizeMonthEntries(monthValue);
 
     if (Object.keys(nextMonth).length > 0) {
       nextCalendar[monthKey] = nextMonth;
@@ -579,6 +586,7 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [profileBusy, setProfileBusy] = useState(false);
   const [roomHydrated, setRoomHydrated] = useState(false);
+  const [personalMonthLoadedKey, setPersonalMonthLoadedKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [authError, setAuthError] = useState('');
   const [profileError, setProfileError] = useState('');
@@ -603,6 +611,12 @@ export default function App() {
 
   const calendarDataRef = useRef(calendarData);
   const lastRemoteCalendarJsonRef = useRef(JSON.stringify(calendarData));
+  const lastRemoteMonthSnapshotRef = useRef({
+    ownerUid: '',
+    roomCode: '',
+    monthKey: '',
+    json: '',
+  });
 
   useEffect(() => {
     calendarDataRef.current = calendarData;
@@ -956,6 +970,192 @@ export default function App() {
       cancelled = true;
     };
   }, [authUser, calendarData, effectiveProfile, profileLoading, roomCode, roomHydrated]);
+
+  useEffect(() => {
+    if (
+      !firebaseEnabled ||
+      !db ||
+      !authUser ||
+      profileLoading ||
+      !effectiveProfile?.displayName ||
+      !effectiveProfile?.side ||
+      roomCode
+    ) {
+      setPersonalMonthLoadedKey('');
+      return undefined;
+    }
+
+    const activeMonthKey = formatMonthKey(viewDate);
+    const monthRef = doc(db, PROFILE_COLLECTION, authUser.uid, MONTHS_SUBCOLLECTION, activeMonthKey);
+    let cancelled = false;
+
+    setPersonalMonthLoadedKey('');
+
+    const unsubscribe = onSnapshot(
+      monthRef,
+      (snapshot) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (!snapshot.exists()) {
+          lastRemoteMonthSnapshotRef.current = {
+            ownerUid: authUser.uid,
+            roomCode: '',
+            monthKey: activeMonthKey,
+            json: '',
+          };
+          setCalendarData((current) => {
+            if (!(activeMonthKey in current)) {
+              return current;
+            }
+
+            const nextCalendar = { ...current };
+            delete nextCalendar[activeMonthKey];
+            return nextCalendar;
+          });
+          setPersonalMonthLoadedKey(activeMonthKey);
+          return;
+        }
+
+        const snapshotData = snapshot.data() ?? {};
+        const remoteMonth = normalizeMonthEntries(
+          snapshotData.calendarData ?? snapshotData.monthEntries ?? snapshotData,
+        );
+        const remoteMonthJson = JSON.stringify(remoteMonth);
+
+        lastRemoteMonthSnapshotRef.current = {
+          ownerUid: authUser.uid,
+          roomCode: '',
+          monthKey: activeMonthKey,
+          json: remoteMonthJson,
+        };
+
+        setCalendarData((current) => {
+          const currentMonthJson = JSON.stringify(current[activeMonthKey] ?? {});
+
+          if (currentMonthJson === remoteMonthJson) {
+            return current;
+          }
+
+          if (Object.keys(remoteMonth).length > 0) {
+            return {
+              ...current,
+              [activeMonthKey]: remoteMonth,
+            };
+          }
+
+          const nextCalendar = { ...current };
+          delete nextCalendar[activeMonthKey];
+          return nextCalendar;
+        });
+
+        setPersonalMonthLoadedKey(activeMonthKey);
+      },
+      () => {
+        if (!cancelled) {
+          setPersonalMonthLoadedKey('');
+        }
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [authUser, db, effectiveProfile, profileLoading, roomCode, viewDate]);
+
+  useEffect(() => {
+    if (
+      !firebaseEnabled ||
+      !db ||
+      !authUser ||
+      profileLoading ||
+      !effectiveProfile?.displayName ||
+      !effectiveProfile?.side ||
+      (roomCode && !roomHydrated)
+    ) {
+      return undefined;
+    }
+
+    const activeMonthKey = formatMonthKey(viewDate);
+    if (!roomCode && personalMonthLoadedKey !== activeMonthKey) {
+      return undefined;
+    }
+
+    const monthSnapshot = calendarData[activeMonthKey] ?? {};
+    const monthSnapshotJson = JSON.stringify(monthSnapshot);
+    const lastSnapshot = lastRemoteMonthSnapshotRef.current;
+
+    if (
+      lastSnapshot.ownerUid === authUser.uid &&
+      lastSnapshot.roomCode === roomCode &&
+      lastSnapshot.monthKey === activeMonthKey &&
+      lastSnapshot.json === monthSnapshotJson
+    ) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const monthRef = doc(db, PROFILE_COLLECTION, authUser.uid, MONTHS_SUBCOLLECTION, activeMonthKey);
+
+    // Keep a user-owned month snapshot in sync without changing the shared room flow.
+    async function syncMonthSnapshot() {
+      try {
+        if (Object.keys(monthSnapshot).length === 0) {
+          if (lastSnapshot.json === '') {
+            return;
+          }
+
+          await deleteDoc(monthRef);
+          if (!cancelled) {
+            lastRemoteMonthSnapshotRef.current = {
+              ownerUid: authUser.uid,
+              roomCode,
+              monthKey: activeMonthKey,
+              json: '',
+            };
+          }
+          return;
+        }
+
+        await setDoc(monthRef, {
+          ownerUid: authUser.uid,
+          roomCode,
+          monthKey: activeMonthKey,
+          calendarData: monthSnapshot,
+          updatedAt: serverTimestamp(),
+        });
+
+        if (!cancelled) {
+          lastRemoteMonthSnapshotRef.current = {
+            ownerUid: authUser.uid,
+            roomCode,
+            monthKey: activeMonthKey,
+            json: monthSnapshotJson,
+          };
+        }
+      } catch {
+        // The shared room save still covers the live calendar, so this is a non-blocking backup.
+      }
+    }
+
+    syncMonthSnapshot();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    authUser,
+    calendarData,
+    db,
+    effectiveProfile,
+    personalMonthLoadedKey,
+    profileLoading,
+    roomCode,
+    roomHydrated,
+    viewDate,
+  ]);
 
   const resolvedMembers = useMemo(() => {
     const nextMembers = { ...roomMembers };
