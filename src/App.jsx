@@ -86,6 +86,113 @@ function generateRoomCode() {
   return code;
 }
 
+function normalizeWorkoutEntry(value) {
+  if (value === true) {
+    return {
+      workedOut: true,
+      arrivalTime: '',
+      leaveTime: '',
+      weightKg: '',
+    };
+  }
+
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const arrivalTime = typeof value.arrivalTime === 'string' ? value.arrivalTime : '';
+    const leaveTime = typeof value.leaveTime === 'string' ? value.leaveTime : '';
+    const rawWeight =
+      typeof value.weightKg === 'string' || typeof value.weightKg === 'number'
+        ? value.weightKg
+        : typeof value.weight === 'string' || typeof value.weight === 'number'
+          ? value.weight
+          : '';
+    const weightKg = rawWeight === '' ? '' : String(rawWeight);
+    const workedOut = typeof value.workedOut === 'boolean' ? value.workedOut : false;
+
+    if (workedOut || arrivalTime || leaveTime || weightKg) {
+      return {
+        workedOut,
+        arrivalTime,
+        leaveTime,
+        weightKg,
+      };
+    }
+  }
+
+  return null;
+}
+
+function extractPersonalMonthEntries(monthEntries, uid) {
+  if (!monthEntries || typeof monthEntries !== 'object' || Array.isArray(monthEntries)) {
+    return {};
+  }
+
+  const nextMonth = {};
+
+  for (const [dayKey, dayValue] of Object.entries(monthEntries)) {
+    if (!dayValue || typeof dayValue !== 'object' || Array.isArray(dayValue)) {
+      continue;
+    }
+
+    const normalizedEntry = normalizeWorkoutEntry(dayValue[uid]);
+
+    if (normalizedEntry) {
+      nextMonth[dayKey] = {
+        [uid]: normalizedEntry,
+      };
+    }
+  }
+
+  return nextMonth;
+}
+
+function mergeMonthEntries(baseMonth, incomingMonth) {
+  const nextMonth =
+    baseMonth && typeof baseMonth === 'object' && !Array.isArray(baseMonth) ? { ...baseMonth } : {};
+  const normalizedIncoming = normalizeMonthEntries(incomingMonth);
+
+  for (const [dayKey, incomingDay] of Object.entries(normalizedIncoming)) {
+    const currentDay =
+      nextMonth[dayKey] && typeof nextMonth[dayKey] === 'object' && !Array.isArray(nextMonth[dayKey])
+        ? nextMonth[dayKey]
+        : {};
+    const mergedDay = {
+      ...currentDay,
+      ...incomingDay,
+    };
+
+    if (Object.keys(mergedDay).length > 0) {
+      nextMonth[dayKey] = mergedDay;
+    } else {
+      delete nextMonth[dayKey];
+    }
+  }
+
+  return nextMonth;
+}
+
+function mergeCalendarData(baseCalendar, incomingCalendar) {
+  const nextCalendar =
+    baseCalendar && typeof baseCalendar === 'object' && !Array.isArray(baseCalendar)
+      ? { ...baseCalendar }
+      : {};
+
+  if (!incomingCalendar || typeof incomingCalendar !== 'object' || Array.isArray(incomingCalendar)) {
+    return nextCalendar;
+  }
+
+  for (const [monthKey, monthValue] of Object.entries(incomingCalendar)) {
+    const mergedMonth = mergeMonthEntries(nextCalendar[monthKey], monthValue);
+
+    if (Object.keys(mergedMonth).length > 0) {
+      nextCalendar[monthKey] = mergedMonth;
+    } else {
+      delete nextCalendar[monthKey];
+    }
+  }
+
+  return nextCalendar;
+}
+
 function normalizeMonthEntries(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return {};
@@ -101,36 +208,10 @@ function normalizeMonthEntries(raw) {
     const nextDay = {};
 
     for (const [uid, checked] of Object.entries(dayValue)) {
-      if (checked === true) {
-        nextDay[uid] = {
-          workedOut: true,
-          arrivalTime: '',
-          leaveTime: '',
-          weightKg: '',
-        };
-        continue;
-      }
+      const normalizedEntry = normalizeWorkoutEntry(checked);
 
-      if (checked && typeof checked === 'object' && !Array.isArray(checked)) {
-        const arrivalTime = typeof checked.arrivalTime === 'string' ? checked.arrivalTime : '';
-        const leaveTime = typeof checked.leaveTime === 'string' ? checked.leaveTime : '';
-        const rawWeight =
-          typeof checked.weightKg === 'string' || typeof checked.weightKg === 'number'
-            ? checked.weightKg
-            : typeof checked.weight === 'string' || typeof checked.weight === 'number'
-              ? checked.weight
-              : '';
-        const weightKg = rawWeight === '' ? '' : String(rawWeight);
-        const workedOut = typeof checked.workedOut === 'boolean' ? checked.workedOut : false;
-
-        if (workedOut || arrivalTime || leaveTime || weightKg) {
-          nextDay[uid] = {
-            workedOut,
-            arrivalTime,
-            leaveTime,
-            weightKg,
-          };
-        }
+      if (normalizedEntry) {
+        nextDay[uid] = normalizedEntry;
       }
     }
 
@@ -837,13 +918,20 @@ export default function App() {
           const snapshotData = snapshot.data() ?? {};
           const remoteCalendar = normalizeCalendarData(snapshotData.calendarData);
           const remoteMembers = normalizeMembers(snapshotData.members);
-          const remoteCalendarJson = JSON.stringify(remoteCalendar);
+          const mergedCalendar = mergeCalendarData(calendarDataRef.current, remoteCalendar);
+          const remoteCalendarJson = JSON.stringify(mergedCalendar);
           const remoteMembersJson = JSON.stringify(remoteMembers);
 
           lastRemoteCalendarJsonRef.current = remoteCalendarJson;
-          setCalendarData((current) =>
-            JSON.stringify(current) === remoteCalendarJson ? current : remoteCalendar,
-          );
+          setCalendarData((current) => {
+            const currentJson = JSON.stringify(current);
+
+            if (currentJson === remoteCalendarJson) {
+              return current;
+            }
+
+            return mergedCalendar;
+          });
           setRoomMembers((current) =>
             JSON.stringify(current) === remoteMembersJson ? current : remoteMembers,
           );
@@ -978,8 +1066,7 @@ export default function App() {
       !authUser ||
       profileLoading ||
       !effectiveProfile?.displayName ||
-      !effectiveProfile?.side ||
-      roomCode
+      !effectiveProfile?.side
     ) {
       setPersonalMonthLoadedKey('');
       return undefined;
@@ -1005,15 +1092,6 @@ export default function App() {
             monthKey: activeMonthKey,
             json: '',
           };
-          setCalendarData((current) => {
-            if (!(activeMonthKey in current)) {
-              return current;
-            }
-
-            const nextCalendar = { ...current };
-            delete nextCalendar[activeMonthKey];
-            return nextCalendar;
-          });
           setPersonalMonthLoadedKey(activeMonthKey);
           return;
         }
@@ -1023,6 +1101,9 @@ export default function App() {
           snapshotData.calendarData ?? snapshotData.monthEntries ?? snapshotData,
         );
         const remoteMonthJson = JSON.stringify(remoteMonth);
+        const mergedCalendar = mergeCalendarData(calendarDataRef.current, {
+          [activeMonthKey]: remoteMonth,
+        });
 
         lastRemoteMonthSnapshotRef.current = {
           ownerUid: authUser.uid,
@@ -1038,16 +1119,7 @@ export default function App() {
             return current;
           }
 
-          if (Object.keys(remoteMonth).length > 0) {
-            return {
-              ...current,
-              [activeMonthKey]: remoteMonth,
-            };
-          }
-
-          const nextCalendar = { ...current };
-          delete nextCalendar[activeMonthKey];
-          return nextCalendar;
+          return mergedCalendar;
         });
 
         setPersonalMonthLoadedKey(activeMonthKey);
@@ -1072,18 +1144,17 @@ export default function App() {
       !authUser ||
       profileLoading ||
       !effectiveProfile?.displayName ||
-      !effectiveProfile?.side ||
-      (roomCode && !roomHydrated)
+      !effectiveProfile?.side
     ) {
       return undefined;
     }
 
     const activeMonthKey = formatMonthKey(viewDate);
-    if (!roomCode && personalMonthLoadedKey !== activeMonthKey) {
+    if (personalMonthLoadedKey !== activeMonthKey) {
       return undefined;
     }
 
-    const monthSnapshot = calendarData[activeMonthKey] ?? {};
+    const monthSnapshot = extractPersonalMonthEntries(calendarData[activeMonthKey] ?? {}, authUser.uid);
     const monthSnapshotJson = JSON.stringify(monthSnapshot);
     const lastSnapshot = lastRemoteMonthSnapshotRef.current;
 
