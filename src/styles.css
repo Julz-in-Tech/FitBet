@@ -2,8 +2,8 @@
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   color: #fbf7ff;
   background:
-    radial-gradient(circle at top left, rgba(255, 117, 196, 0.34), transparent 28%),
-    radial-gradient(circle at 85% 15%, rgba(96, 189, 255, 0.28), transparent 24%),
+    radial-gradient(circle at top left, rgba(216, 143, 168, 0.34), transparent 28%),
+    radial-gradient(circle at 85% 15%, rgba(110, 168, 221, 0.28), transparent 24%),
     radial-gradient(circle at 50% 0%, rgba(160, 96, 255, 0.22), transparent 34%),
     linear-gradient(160deg, #1a1036 0%, #24114d 46%, #121f42 100%);
   color-scheme: dark;
@@ -13,10 +13,10 @@
   --panel-bg: rgba(34, 18, 72, 0.66);
   --violet: #a766ff;
   --violet-deep: #6d33de;
-  --pink: #ff73c9;
-  --pink-deep: #ef3fa7;
-  --blue: #72cfff;
-  --blue-deep: #1d8ee6;
+  --pink: #d88fa8;
+  --pink-deep: #b96b87;
+  --blue: #6ea8dd;
+  --blue-deep: #3f78b5;
   --both: #ca91ff;
   --muted: #ddd0ff;
   --surface: rgba(255, 255, 255, 0.05);
@@ -45,6 +45,125 @@ button {
   width: min(1180px, calc(100% - 2rem));
   margin: 0 auto;
   padding: 2.5rem 0 3rem;
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.topbar-menu {
+  position: relative;
+  z-index: 45;
+}
+
+.menu-toggle {
+  display: inline-grid;
+  gap: 0.22rem;
+  padding: 0.7rem;
+  border: 1px solid rgba(221, 208, 255, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.menu-toggle span {
+  display: block;
+  width: 1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: #f8f1ff;
+}
+
+.menu-toggle.active {
+  background: linear-gradient(135deg, rgba(167, 102, 255, 0.24), rgba(255, 255, 255, 0.08));
+}
+
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border: none;
+  background: rgba(10, 8, 22, 0.14);
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  left: 0;
+  z-index: 41;
+  width: min(820px, calc(100vw - 2rem));
+  border: 1px solid rgba(221, 208, 255, 0.18);
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(26, 18, 52, 0.96), rgba(42, 22, 82, 0.94)),
+    rgba(19, 13, 40, 0.96);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(18px);
+}
+
+.menu-dropdown-inner {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.menu-nav {
+  display: grid;
+  align-content: start;
+  gap: 0.6rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(221, 208, 255, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.menu-nav-button {
+  min-height: 48px;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: #f7f0ff;
+  text-align: left;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease, border-color 150ms ease;
+}
+
+.menu-nav-button:hover {
+  transform: translateY(-1px);
+}
+
+.menu-nav-button.active {
+  border-color: rgba(221, 208, 255, 0.2);
+  background: linear-gradient(135deg, rgba(167, 102, 255, 0.26), rgba(255, 255, 255, 0.06));
+}
+
+.menu-panel {
+  min-width: 0;
+}
+
+.menu-panel-section {
+  padding: 0.35rem 0.25rem 0.25rem;
+}
+
+.menu-panel-section h3 {
+  margin: 0.45rem 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.7rem;
+}
+
+.menu-panel-section .panel-note,
+.menu-panel-section .helper-note,
+.menu-panel-section .error-note {
+  max-width: 56ch;
+}
+
+.topbar-logout {
+  min-width: 132px;
 }
 
 .auth-shell {
@@ -76,11 +195,16 @@ button {
   padding: 2rem;
   border-radius: 34px;
   background:
-    radial-gradient(circle at top left, rgba(255, 115, 201, 0.26), transparent 28%),
-    radial-gradient(circle at 82% 18%, rgba(114, 207, 255, 0.22), transparent 24%),
-    radial-gradient(circle at 42% 115%, rgba(167, 102, 255, 0.22), transparent 30%),
-    linear-gradient(145deg, rgba(167, 102, 255, 0.18), rgba(17, 20, 34, 0.4)),
-    var(--panel-bg);
+    linear-gradient(145deg, rgba(26, 18, 52, 0.84), rgba(51, 27, 95, 0.56) 42%, rgba(22, 44, 92, 0.48)),
+    radial-gradient(circle at top left, rgba(255, 115, 201, 0.3), transparent 28%),
+    radial-gradient(circle at 82% 18%, rgba(114, 207, 255, 0.24), transparent 24%),
+    radial-gradient(circle at 42% 115%, rgba(167, 102, 255, 0.24), transparent 30%),
+    var(--auth-showcase-image) center 34% / cover no-repeat;
+}
+
+.auth-showcase > * {
+  position: relative;
+  z-index: 1;
 }
 
 .auth-showcase-top {
@@ -414,11 +538,45 @@ button {
 }
 
 .hero-card {
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 1.8fr 1fr;
   gap: 1.5rem;
   padding: 1.75rem;
   border-radius: 30px;
+}
+
+.hero-card-image {
+  background:
+    linear-gradient(100deg, rgba(26, 16, 50, 0.8), rgba(53, 27, 95, 0.58) 40%, rgba(26, 54, 102, 0.52)),
+    radial-gradient(circle at top right, rgba(255, 115, 201, 0.24), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(114, 207, 255, 0.2), transparent 32%),
+    var(--hero-image) center 36% / cover no-repeat;
+}
+
+.hero-card-image::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(14, 10, 30, 0.08), transparent 34%, rgba(14, 10, 30, 0.18) 100%);
+  pointer-events: none;
+}
+
+.hero-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-card-image .hero-copy {
+  padding: 1.5rem;
+  border-radius: 26px;
+  background:
+    linear-gradient(145deg, rgba(15, 11, 30, 0.52), rgba(52, 23, 88, 0.26)),
+    rgba(18, 12, 40, 0.28);
+  border: 1px solid rgba(221, 208, 255, 0.14);
+  backdrop-filter: blur(6px);
 }
 
 .eyebrow,
@@ -460,6 +618,14 @@ button {
   background:
     linear-gradient(135deg, rgba(167, 102, 255, 0.28), rgba(255, 115, 201, 0.2), rgba(114, 207, 255, 0.24)),
     rgba(255, 255, 255, 0.05);
+}
+
+.hero-card-image .winner-banner {
+  background:
+    linear-gradient(135deg, rgba(167, 102, 255, 0.34), rgba(255, 115, 201, 0.24), rgba(114, 207, 255, 0.22)),
+    rgba(10, 12, 24, 0.28);
+  border: 1px solid rgba(221, 208, 255, 0.12);
+  backdrop-filter: blur(6px);
 }
 
 .winner-banner p {
@@ -555,8 +721,8 @@ button {
 }
 
 .sync-pill.synced .sync-dot {
-  background: #72cfff;
-  box-shadow: 0 0 0 0.18rem rgba(114, 207, 255, 0.16);
+  background: var(--blue);
+  box-shadow: 0 0 0 0.18rem rgba(110, 168, 221, 0.16);
 }
 
 .sync-pill.saving .sync-dot,
@@ -567,8 +733,8 @@ button {
 }
 
 .sync-pill.error .sync-dot {
-  background: #ff73c9;
-  box-shadow: 0 0 0 0.18rem rgba(255, 115, 201, 0.18);
+  background: var(--pink);
+  box-shadow: 0 0 0 0.18rem rgba(216, 143, 168, 0.18);
 }
 
 .sync-pill.signed-out .sync-dot,
@@ -604,27 +770,35 @@ button {
 }
 
 .pink-card {
-  background:
-    linear-gradient(145deg, rgba(255, 115, 201, 0.26), rgba(167, 102, 255, 0.12), rgba(34, 18, 72, 0.72)),
-    var(--panel-bg);
+  background: #d088a2;
+  border-color: rgba(255, 227, 238, 0.26);
 }
 
 .blue-card {
-  background:
-    linear-gradient(145deg, rgba(114, 207, 255, 0.24), rgba(167, 102, 255, 0.12), rgba(34, 18, 72, 0.72)),
-    var(--panel-bg);
+  background: #669ed8;
+  border-color: rgba(224, 242, 255, 0.24);
 }
 
 .board-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.9fr);
+  grid-template-columns: 1fr;
+  align-items: start;
   gap: 1rem;
   margin-top: 1rem;
+}
+
+.board-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.95fr);
+  align-items: start;
+  gap: 1rem;
 }
 
 .calendar-card {
   padding: 1.5rem;
   border-radius: 30px;
+  align-self: start;
+  height: fit-content;
 }
 
 .calendar-toolbar {
@@ -744,13 +918,13 @@ button {
 }
 
 .calendar-cell.pink {
-  background: linear-gradient(180deg, rgba(255, 115, 201, 0.34), rgba(255, 115, 201, 0.12));
-  border-color: rgba(255, 115, 201, 0.55);
+  background: linear-gradient(180deg, rgba(216, 143, 168, 0.34), rgba(216, 143, 168, 0.12));
+  border-color: rgba(216, 143, 168, 0.55);
 }
 
 .calendar-cell.blue {
-  background: linear-gradient(180deg, rgba(114, 207, 255, 0.3), rgba(114, 207, 255, 0.12));
-  border-color: rgba(114, 207, 255, 0.55);
+  background: linear-gradient(180deg, rgba(110, 168, 221, 0.3), rgba(110, 168, 221, 0.12));
+  border-color: rgba(110, 168, 221, 0.55);
 }
 
 .calendar-cell.both {
@@ -778,11 +952,6 @@ button {
   right: 0.85rem;
   bottom: 0.8rem;
   font-size: 1.2rem;
-}
-
-.side-panel {
-  display: grid;
-  gap: 1rem;
 }
 
 .panel-card {
@@ -823,11 +992,25 @@ button {
     var(--panel-bg);
 }
 
-.info-card {
+.settings-card {
   background:
-    radial-gradient(circle at 85% 0%, rgba(167, 102, 255, 0.24), transparent 30%),
-    linear-gradient(145deg, rgba(167, 102, 255, 0.2), rgba(255, 115, 201, 0.12) 46%, rgba(34, 18, 72, 0.82)),
+    radial-gradient(circle at 85% 0%, rgba(167, 102, 255, 0.2), transparent 30%),
+    radial-gradient(circle at 10% 100%, rgba(114, 207, 255, 0.16), transparent 26%),
+    linear-gradient(145deg, rgba(167, 102, 255, 0.18), rgba(255, 115, 201, 0.1) 46%, rgba(34, 18, 72, 0.82)),
     var(--panel-bg);
+}
+
+.sidebar-sync-pill {
+  margin-top: 1rem;
+}
+
+.day-details-section {
+  align-self: start;
+}
+
+.day-details-section .details-card {
+  padding: 1.5rem;
+  height: fit-content;
 }
 
 .panel-card h3 {
@@ -978,6 +1161,10 @@ button {
   margin-top: 0.65rem;
 }
 
+.room-actions.single {
+  grid-template-columns: 1fr;
+}
+
 .action-button {
   min-height: 50px;
   padding: 0.85rem 1rem;
@@ -1005,6 +1192,11 @@ button {
 
 .action-button.subtle {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(167, 102, 255, 0.12));
+}
+
+.action-button.warning {
+  background: linear-gradient(135deg, rgba(255, 115, 201, 0.26), rgba(167, 102, 255, 0.18));
+  border-color: rgba(255, 184, 220, 0.3);
 }
 
 .room-note,
@@ -1053,11 +1245,11 @@ button {
 }
 
 .pink-member {
-  background: linear-gradient(135deg, rgba(255, 115, 201, 0.2), rgba(255, 255, 255, 0.04));
+  background: rgba(216, 143, 168, 0.2);
 }
 
 .blue-member {
-  background: linear-gradient(135deg, rgba(114, 207, 255, 0.2), rgba(255, 255, 255, 0.04));
+  background: rgba(110, 168, 221, 0.2);
 }
 
 .day-participant-list {
@@ -1075,11 +1267,11 @@ button {
 }
 
 .day-entry-card.pink {
-  background: linear-gradient(145deg, rgba(255, 115, 201, 0.18), rgba(255, 255, 255, 0.03));
+  background: rgba(216, 143, 168, 0.18);
 }
 
 .day-entry-card.blue {
-  background: linear-gradient(145deg, rgba(114, 207, 255, 0.18), rgba(255, 255, 255, 0.03));
+  background: rgba(110, 168, 221, 0.18);
 }
 
 .day-entry-card p {
@@ -1144,6 +1336,18 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .board-main {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-dropdown {
+    width: min(100vw - 1rem, 100%);
+  }
+
+  .menu-dropdown-inner {
+    grid-template-columns: 1fr;
+  }
+
   .auth-stat-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1178,6 +1382,10 @@ button {
   .auth-showcase-top {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .app-topbar {
+    gap: 0.8rem;
   }
 
   .auth-stat-row {

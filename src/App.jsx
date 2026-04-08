@@ -24,6 +24,10 @@ const SIDE_OPTIONS = [
   { value: 'pink', label: 'Pink Side', emoji: '\uD83D\uDC96' },
   { value: 'blue', label: 'Blue Side', emoji: '\uD83D\uDC99' },
 ];
+const LOGIN_SHOWCASE_IMAGE =
+  'https://images.pexels.com/photos/6456335/pexels-photo-6456335.jpeg?auto=compress&cs=tinysrgb&w=1200';
+const HERO_SHOWCASE_IMAGE =
+  'https://images.pexels.com/photos/3822726/pexels-photo-3822726.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
 function padDay(day) {
   return String(day).padStart(2, '0');
@@ -231,6 +235,13 @@ function getUserFacingError(error, fallbackMessage) {
   if (error && typeof error === 'object' && 'code' in error) {
     const errorCode = error.code;
 
+    if (
+      errorCode === 'auth/invalid-api-key' ||
+      errorCode === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.'
+    ) {
+      return 'Your deployed app is using an invalid Firebase web API key. In Vercel, check VITE_FIREBASE_API_KEY, remove any quotes or extra spaces, save it for Production, and redeploy.';
+    }
+
     if (errorCode === 'auth/configuration-not-found' || errorCode === 'auth/operation-not-allowed') {
       return 'Firebase Authentication is not fully configured yet. In Firebase Console, open Authentication, enable Email/Password under Sign-in method, save it, then refresh Fit Bet.';
     }
@@ -382,7 +393,10 @@ function AuthPage({
   return (
     <main className="auth-shell">
       <section className="auth-layout">
-        <div className="auth-showcase">
+        <div
+          className="auth-showcase"
+          style={{ '--auth-showcase-image': `url(${LOGIN_SHOWCASE_IMAGE})` }}
+        >
           <div className="auth-orb auth-orb-pink" aria-hidden="true" />
           <div className="auth-orb auth-orb-blue" aria-hidden="true" />
           <div className="auth-showcase-top">
@@ -631,6 +645,8 @@ export default function App() {
   const [copyMessage, setCopyMessage] = useState('');
   const [monthlyWinnerAlert, setMonthlyWinnerAlert] = useState(null);
   const [dayDetailsBusy, setDayDetailsBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeMenuPanel, setActiveMenuPanel] = useState('profile');
   const [authForm, setAuthForm] = useState({
     email: '',
     password: '',
@@ -1217,6 +1233,11 @@ export default function App() {
     }
   }
 
+  async function handleLeaveRoomAndSignOut() {
+    handleLeaveRoom();
+    await handleSignOut();
+  }
+
   async function handleCopyCode() {
     if (!roomCode || typeof navigator === 'undefined' || !navigator.clipboard) {
       setCopyMessage('Copy the room code manually for now.');
@@ -1414,7 +1435,267 @@ export default function App() {
         </div>
       ) : null}
 
-      <section className="hero-card">
+      <div className="app-topbar">
+        <div className="topbar-menu">
+          <button
+            type="button"
+            className={`menu-toggle ${menuOpen ? 'active' : ''}`}
+            onClick={() => setMenuOpen((current) => !current)}
+            aria-expanded={menuOpen}
+            aria-controls="dashboard-menu"
+            aria-label="Open menu"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+
+          {menuOpen ? (
+            <>
+              <button
+                type="button"
+                className="menu-scrim"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close menu"
+              />
+
+              <section
+                id="dashboard-menu"
+                className="menu-dropdown"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Dashboard menu"
+              >
+                <div className="menu-dropdown-inner">
+                  <div className="menu-nav">
+                    <p className="panel-kicker">Menu</p>
+                    <button
+                      type="button"
+                      className={`menu-nav-button ${activeMenuPanel === 'profile' ? 'active' : ''}`}
+                      onClick={() => setActiveMenuPanel('profile')}
+                    >
+                      Profile
+                    </button>
+                    <button
+                      type="button"
+                      className={`menu-nav-button ${activeMenuPanel === 'room' ? 'active' : ''}`}
+                      onClick={() => setActiveMenuPanel('room')}
+                    >
+                      Shared room
+                    </button>
+                    <button
+                      type="button"
+                      className={`menu-nav-button ${activeMenuPanel === 'settings' ? 'active' : ''}`}
+                      onClick={() => setActiveMenuPanel('settings')}
+                    >
+                      Settings
+                    </button>
+                  </div>
+
+                  <div className="menu-panel">
+                    {activeMenuPanel === 'profile' ? (
+                      <div className="menu-panel-section">
+                        <p className="panel-kicker">Profile</p>
+                        <h3>Personal login and profile</h3>
+
+                        <div className="account-summary">
+                          <p className="room-note">
+                            Signed in as <strong>{authUser.email ?? 'your account'}</strong>
+                          </p>
+                        </div>
+
+                        {profileLoading ? (
+                          <p className="helper-note">Loading your profile...</p>
+                        ) : (
+                          <>
+                            <form className="stack-form" onSubmit={handleProfileSave}>
+                              <label className="field-label" htmlFor="profile-name">
+                                Display name
+                              </label>
+                              <input
+                                id="profile-name"
+                                className="text-input"
+                                type="text"
+                                value={profileForm.displayName}
+                                onChange={(event) =>
+                                  setProfileForm((current) => ({
+                                    ...current,
+                                    displayName: event.target.value,
+                                  }))
+                                }
+                                placeholder="Julia"
+                              />
+
+                              <span className="field-label">Your side</span>
+                              <SidePicker
+                                value={profileForm.side}
+                                onChange={(nextSide) =>
+                                  setProfileForm((current) => ({
+                                    ...current,
+                                    side: nextSide,
+                                  }))
+                                }
+                              />
+
+                              <div className="room-actions single">
+                                <button
+                                  type="submit"
+                                  className="action-button primary"
+                                  disabled={profileBusy}
+                                >
+                                  {profileBusy ? 'Saving...' : profileReady ? 'Save profile changes' : 'Save profile'}
+                                </button>
+                              </div>
+                            </form>
+
+                            <p className="helper-note">
+                              Choose opposite sides on the two accounts so the calendar can color your
+                              bet correctly.
+                            </p>
+                          </>
+                        )}
+
+                        {authError ? <p className="error-note">{authError}</p> : null}
+                        {profileError ? <p className="error-note">{profileError}</p> : null}
+                      </div>
+                    ) : null}
+
+                    {activeMenuPanel === 'room' ? (
+                      <div className="menu-panel-section">
+                        <p className="panel-kicker">Shared room</p>
+                        <h3>One room, two personal profiles</h3>
+                        <p className="panel-note">
+                          One of you creates a room code, the other joins it, and after that both
+                          phones stay on the same live calendar.
+                        </p>
+
+                        {profileReady ? (
+                          <>
+                            <label className="field-label" htmlFor="room-code">
+                              Shared room code
+                            </label>
+                            <div className="room-entry">
+                              <input
+                                id="room-code"
+                                type="text"
+                                value={roomInput}
+                                placeholder="Enter or create a code"
+                                onChange={(event) => setRoomInput(normalizeRoomCode(event.target.value))}
+                              />
+                            </div>
+
+                            <div className="room-actions">
+                              <button type="button" className="action-button primary" onClick={handleJoinRoom}>
+                                Join room
+                              </button>
+                              <button type="button" className="action-button secondary" onClick={handleCreateRoom}>
+                                New room
+                              </button>
+                            </div>
+
+                            {roomCode ? (
+                              <>
+                                <p className="room-note">Active room: {roomCode}</p>
+                                <div className="room-members">
+                                  <p className="room-member-pill pink-member">
+                                    {pinkMember ? `Pink: ${pinkMember.displayName}` : 'Pink: waiting for a profile'}
+                                  </p>
+                                  <p className="room-member-pill blue-member">
+                                    {blueMember ? `Blue: ${blueMember.displayName}` : 'Blue: waiting for a profile'}
+                                  </p>
+                                </div>
+                                <div className="room-actions single">
+                                  <button
+                                    type="button"
+                                    className="action-button subtle"
+                                    onClick={handleCopyCode}
+                                  >
+                                    Copy code
+                                  </button>
+                                </div>
+                              </>
+                            ) : null}
+
+                            {copyMessage ? (
+                              <p className="helper-note">{copyMessage}</p>
+                            ) : (
+                              <p className="helper-note">
+                                Keep the room code private. Anyone with the code can join this shared bet.
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="helper-note">
+                            Sign in and save your profile first. After that, you can create or join a
+                            shared room from your own account.
+                          </p>
+                        )}
+
+                        {roomError ? <p className="error-note">{roomError}</p> : null}
+                      </div>
+                    ) : null}
+
+                    {activeMenuPanel === 'settings' ? (
+                      <div className="menu-panel-section">
+                        <p className="panel-kicker">Settings</p>
+                        <h3>Room and device actions</h3>
+                        <p className="panel-note">
+                          Manage how this phone stays connected to the shared Fit Bet room.
+                        </p>
+
+                        <div className={`sync-pill ${syncStatus} sidebar-sync-pill`}>
+                          <span className="sync-dot" />
+                          <span>{getSyncLabel(syncStatus)}</span>
+                        </div>
+
+                        <div className="room-actions single">
+                          <button
+                            type="button"
+                            className="action-button subtle"
+                            onClick={handleLeaveRoom}
+                            disabled={!roomCode}
+                          >
+                            Leave room on this phone
+                          </button>
+                        </div>
+
+                        <div className="room-actions single">
+                          <button
+                            type="button"
+                            className="action-button warning"
+                            onClick={handleLeaveRoomAndSignOut}
+                            disabled={!roomCode}
+                          >
+                            Leave room and log out
+                          </button>
+                        </div>
+
+                        <p className="helper-note">
+                          Use the top-right button if you only want to log out and keep this phone
+                          connected to the room.
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </section>
+            </>
+          ) : null}
+        </div>
+
+        <button
+          type="button"
+          className="action-button subtle topbar-logout"
+          onClick={handleSignOut}
+        >
+          Log out
+        </button>
+      </div>
+
+      <section
+        className="hero-card hero-card-image"
+        style={{ '--hero-image': `url(${HERO_SHOWCASE_IMAGE})` }}
+      >
         <div className="hero-copy">
           <p className="eyebrow">FIT BET</p>
           <h1>Turn gym consistency into a shared game.</h1>
@@ -1453,365 +1734,210 @@ export default function App() {
       </section>
 
       <section className="board-layout">
-        <div className="calendar-card">
-          <div className="calendar-toolbar">
-            <button type="button" className="nav-button" onClick={() => handleMonthChange(-1)}>
-              &larr;
-            </button>
+        <div className="board-main">
+          <div className="calendar-card">
+            <div className="calendar-toolbar">
+              <button type="button" className="nav-button" onClick={() => handleMonthChange(-1)}>
+                &larr;
+              </button>
 
-            <div>
-              <p className="calendar-kicker">Monthly board</p>
-              <h2>{viewDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</h2>
+              <div>
+                <p className="calendar-kicker">Monthly board</p>
+                <h2>{viewDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</h2>
+              </div>
+
+              <button type="button" className="nav-button" onClick={() => handleMonthChange(1)}>
+                &rarr;
+              </button>
             </div>
 
-            <button type="button" className="nav-button" onClick={() => handleMonthChange(1)}>
-              &rarr;
-            </button>
-          </div>
-
-          <p className="calendar-helper">
-            Pick a date to log your workout details. Violet appears automatically when both
-            profiles mark a workout on the same day.
-          </p>
-
-          <div className="calendar-legend" aria-hidden="true">
-            <span className="legend-item pink">
-              <span className="legend-dot" />
-              Pink logged
-            </span>
-            <span className="legend-item blue">
-              <span className="legend-dot" />
-              Blue logged
-            </span>
-            <span className="legend-item both">
-              <span className="legend-dot" />
-              Both logged
-            </span>
-          </div>
-
-          <div className="weekday-row" aria-hidden="true">
-            {WEEKDAYS.map((weekday) => (
-              <span key={weekday}>{weekday}</span>
-            ))}
-          </div>
-
-          <div className="calendar-grid">
-            {calendarDays.map((day, index) => {
-              if (day === null) {
-                return <div key={`blank-${index}`} className="calendar-cell calendar-empty" />;
-              }
-
-              const dayKey = padDay(day);
-              const dayEntries = monthEntries[dayKey] ?? {};
-              const { label, emoji, status } = getDayMeta(dayEntries, resolvedMembers);
-              const isToday =
-                day === today.getDate() &&
-                viewDate.getMonth() === today.getMonth() &&
-                viewDate.getFullYear() === today.getFullYear();
-
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  className={`calendar-cell ${status} ${isToday ? 'today' : ''} ${canLog ? '' : 'locked'}`}
-                  onClick={() => handleDayClick(day)}
-                  aria-label={`${label} for ${viewDate.toLocaleString('en-US', {
-                    month: 'long',
-                  })} ${day}`}
-                >
-                  <span className="day-number">{day}</span>
-                  <span className="day-mark">{emoji}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <aside className="side-panel">
-          <div className="panel-card account-card">
-            <p className="panel-kicker">Your account</p>
-            <h3>Personal login and profile</h3>
-
-            <div className="account-summary">
-              <p className="room-note">
-                Signed in as <strong>{authUser.email ?? 'your account'}</strong>
-              </p>
-            </div>
-
-            {profileLoading ? (
-              <p className="helper-note">Loading your profile...</p>
-            ) : (
-              <>
-                <form className="stack-form" onSubmit={handleProfileSave}>
-                  <label className="field-label" htmlFor="profile-name">
-                    Display name
-                  </label>
-                  <input
-                    id="profile-name"
-                    className="text-input"
-                    type="text"
-                    value={profileForm.displayName}
-                    onChange={(event) =>
-                      setProfileForm((current) => ({
-                        ...current,
-                        displayName: event.target.value,
-                      }))
-                    }
-                    placeholder="Julia"
-                  />
-
-                  <span className="field-label">Your side</span>
-                  <SidePicker
-                    value={profileForm.side}
-                    onChange={(nextSide) =>
-                      setProfileForm((current) => ({
-                        ...current,
-                        side: nextSide,
-                      }))
-                    }
-                  />
-
-                  <div className="room-actions">
-                    <button type="submit" className="action-button primary" disabled={profileBusy}>
-                      {profileBusy ? 'Saving...' : profileReady ? 'Save profile changes' : 'Save profile'}
-                    </button>
-                    <button
-                      type="button"
-                      className="action-button subtle"
-                      onClick={handleSignOut}
-                    >
-                      Log out
-                    </button>
-                  </div>
-                </form>
-
-                <p className="helper-note">
-                  Choose opposite sides on the two accounts so the calendar can color your bet
-                  correctly.
-                </p>
-              </>
-            )}
-
-            {authError ? <p className="error-note">{authError}</p> : null}
-            {profileError ? <p className="error-note">{profileError}</p> : null}
-          </div>
-
-          <div className="panel-card room-card">
-            <p className="panel-kicker">Shared room</p>
-            <h3>One room, two personal profiles</h3>
-            <p className="panel-note">
-              One of you creates a room code, the other joins it, and after that both phones stay
-              on the same live calendar.
+            <p className="calendar-helper">
+              Pick a date to log your workout details. Violet appears automatically when both
+              profiles mark a workout on the same day.
             </p>
 
-            {profileReady ? (
-              <>
-                <label className="field-label" htmlFor="room-code">
-                  Shared room code
-                </label>
-                <div className="room-entry">
+            <div className="calendar-legend" aria-hidden="true">
+              <span className="legend-item pink">
+                <span className="legend-dot" />
+                Pink logged
+              </span>
+              <span className="legend-item blue">
+                <span className="legend-dot" />
+                Blue logged
+              </span>
+              <span className="legend-item both">
+                <span className="legend-dot" />
+                Both logged
+              </span>
+            </div>
+
+            <div className="weekday-row" aria-hidden="true">
+              {WEEKDAYS.map((weekday) => (
+                <span key={weekday}>{weekday}</span>
+              ))}
+            </div>
+
+            <div className="calendar-grid">
+              {calendarDays.map((day, index) => {
+                if (day === null) {
+                  return <div key={`blank-${index}`} className="calendar-cell calendar-empty" />;
+                }
+
+                const dayKey = padDay(day);
+                const dayEntries = monthEntries[dayKey] ?? {};
+                const { label, emoji, status } = getDayMeta(dayEntries, resolvedMembers);
+                const isToday =
+                  day === today.getDate() &&
+                  viewDate.getMonth() === today.getMonth() &&
+                  viewDate.getFullYear() === today.getFullYear();
+
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    className={`calendar-cell ${status} ${isToday ? 'today' : ''} ${canLog ? '' : 'locked'}`}
+                    onClick={() => handleDayClick(day)}
+                    aria-label={`${label} for ${viewDate.toLocaleString('en-US', {
+                      month: 'long',
+                    })} ${day}`}
+                  >
+                    <span className="day-number">{day}</span>
+                    <span className="day-mark">{emoji}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <section className="day-details-section">
+            <div className="panel-card details-card">
+              <p className="panel-kicker">Day details</p>
+              <h3>{selectedDateLabel}</h3>
+              <p className="panel-note">
+                Save your arrival time, leaving time, and weight for this date. Monthly totals still
+                only count days where you marked that you worked out.
+              </p>
+
+              <form className="stack-form day-details-form" onSubmit={handleSaveDayDetails}>
+                <label className={`toggle-row ${dayDetailsForm.workedOut ? 'active' : ''}`}>
                   <input
-                    id="room-code"
-                    type="text"
-                    value={roomInput}
-                    placeholder="Enter or create a code"
-                    onChange={(event) => setRoomInput(normalizeRoomCode(event.target.value))}
+                    type="checkbox"
+                    checked={dayDetailsForm.workedOut}
+                    onChange={handleWorkedOutToggle}
+                    disabled={!canLog}
                   />
+                  <span>I worked out on this day</span>
+                </label>
+
+                <div className="detail-grid">
+                  <div>
+                    <label className="field-label" htmlFor="arrival-time">
+                      Arrival time
+                    </label>
+                    <input
+                      id="arrival-time"
+                      className="text-input"
+                      type="time"
+                      value={dayDetailsForm.arrivalTime}
+                      onChange={(event) => handleDayDetailsChange('arrivalTime', event.target.value)}
+                      disabled={!canLog}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="field-label" htmlFor="leave-time">
+                      Leaving time
+                    </label>
+                    <input
+                      id="leave-time"
+                      className="text-input"
+                      type="time"
+                      value={dayDetailsForm.leaveTime}
+                      onChange={(event) => handleDayDetailsChange('leaveTime', event.target.value)}
+                      disabled={!canLog}
+                    />
+                  </div>
+
+                  <div className="detail-grid-span">
+                    <label className="field-label" htmlFor="weight-kg">
+                      Weight (kg)
+                    </label>
+                    <input
+                      id="weight-kg"
+                      className="text-input"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={dayDetailsForm.weightKg}
+                      onChange={(event) => handleDayDetailsChange('weightKg', event.target.value)}
+                      disabled={!canLog}
+                      placeholder="80.5"
+                    />
+                  </div>
                 </div>
 
                 <div className="room-actions">
-                  <button type="button" className="action-button primary" onClick={handleJoinRoom}>
-                    Join room
+                  <button type="submit" className="action-button primary" disabled={!canLog || dayDetailsBusy}>
+                    {dayDetailsBusy ? 'Saving...' : 'Save day details'}
                   </button>
-                  <button type="button" className="action-button secondary" onClick={handleCreateRoom}>
-                    New room
+                  <button
+                    type="button"
+                    className="action-button subtle"
+                    onClick={handleClearDayDetails}
+                    disabled={!canLog}
+                  >
+                    Clear my details
                   </button>
                 </div>
+              </form>
 
-                {roomCode ? (
-                  <>
-                    <p className="room-note">Active room: {roomCode}</p>
-                    <div className="room-members">
-                      <p className="room-member-pill pink-member">
-                        {pinkMember ? `Pink: ${pinkMember.displayName}` : 'Pink: waiting for a profile'}
-                      </p>
-                      <p className="room-member-pill blue-member">
-                        {blueMember ? `Blue: ${blueMember.displayName}` : 'Blue: waiting for a profile'}
-                      </p>
-                    </div>
-                    <div className="room-actions compact">
-                      <button
-                        type="button"
-                        className="action-button subtle"
-                        onClick={handleCopyCode}
-                      >
-                        Copy code
-                      </button>
-                      <button
-                        type="button"
-                        className="action-button subtle"
-                        onClick={handleLeaveRoom}
-                      >
-                        Leave room
-                      </button>
-                    </div>
-                  </>
-                ) : null}
+              {canLog ? (
+                <p className="helper-note">
+                  Your details only update your own profile for this date. The other person updates
+                  theirs from their own login.
+                </p>
+              ) : (
+                <p className="helper-note">
+                  Join a room with your saved profile to start logging arrival time, leaving time, and
+                  weight.
+                </p>
+              )}
 
-                {copyMessage ? (
-                  <p className="helper-note">{copyMessage}</p>
-                ) : (
-                  <p className="helper-note">
-                    Keep the room code private. Anyone with the code can join this shared bet.
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="helper-note">
-                Sign in and save your profile first. After that, you can create or join a shared
-                room from your own account.
-              </p>
-            )}
+              {dayDetailsError ? <p className="error-note">{dayDetailsError}</p> : null}
 
-            {roomError ? <p className="error-note">{roomError}</p> : null}
-          </div>
-
-          <div className="panel-card details-card">
-            <p className="panel-kicker">Day details</p>
-            <h3>{selectedDateLabel}</h3>
-            <p className="panel-note">
-              Save your arrival time, leaving time, and weight for this date. Monthly totals still
-              only count days where you marked that you worked out.
-            </p>
-
-            <form className="stack-form day-details-form" onSubmit={handleSaveDayDetails}>
-              <label className={`toggle-row ${dayDetailsForm.workedOut ? 'active' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={dayDetailsForm.workedOut}
-                  onChange={handleWorkedOutToggle}
-                  disabled={!canLog}
-                />
-                <span>I worked out on this day</span>
-              </label>
-
-              <div className="detail-grid">
-                <div>
-                  <label className="field-label" htmlFor="arrival-time">
-                    Arrival time
-                  </label>
-                  <input
-                    id="arrival-time"
-                    className="text-input"
-                    type="time"
-                    value={dayDetailsForm.arrivalTime}
-                    onChange={(event) => handleDayDetailsChange('arrivalTime', event.target.value)}
-                    disabled={!canLog}
-                  />
-                </div>
-
-                <div>
-                  <label className="field-label" htmlFor="leave-time">
-                    Leaving time
-                  </label>
-                  <input
-                    id="leave-time"
-                    className="text-input"
-                    type="time"
-                    value={dayDetailsForm.leaveTime}
-                    onChange={(event) => handleDayDetailsChange('leaveTime', event.target.value)}
-                    disabled={!canLog}
-                  />
-                </div>
-
-                <div className="detail-grid-span">
-                  <label className="field-label" htmlFor="weight-kg">
-                    Weight (kg)
-                  </label>
-                  <input
-                    id="weight-kg"
-                    className="text-input"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={dayDetailsForm.weightKg}
-                    onChange={(event) => handleDayDetailsChange('weightKg', event.target.value)}
-                    disabled={!canLog}
-                    placeholder="80.5"
-                  />
-                </div>
+              <div className="day-participant-list">
+                {selectedDayMemberSummaries.map((memberSummary) => (
+                  <div
+                    key={memberSummary.key}
+                    className={`day-entry-card ${memberSummary.side}`}
+                  >
+                    <p className="day-entry-name">{memberSummary.label}</p>
+                    {memberSummary.entry ? (
+                      <>
+                        <p>{memberSummary.entry.workedOut ? 'Workout logged' : 'No workout ticked'}</p>
+                        <p>
+                          Arrival:{' '}
+                          {memberSummary.entry.arrivalTime || 'Not logged'}
+                        </p>
+                        <p>
+                          Leaving:{' '}
+                          {memberSummary.entry.leaveTime || 'Not logged'}
+                        </p>
+                        <p>
+                          Weight:{' '}
+                          {memberSummary.entry.weightKg ? `${memberSummary.entry.weightKg} kg` : 'Not logged'}
+                        </p>
+                      </>
+                    ) : (
+                      <p>No details logged for this day yet.</p>
+                    )}
+                  </div>
+                ))}
               </div>
-
-              <div className="room-actions">
-                <button type="submit" className="action-button primary" disabled={!canLog || dayDetailsBusy}>
-                  {dayDetailsBusy ? 'Saving...' : 'Save day details'}
-                </button>
-                <button
-                  type="button"
-                  className="action-button subtle"
-                  onClick={handleClearDayDetails}
-                  disabled={!canLog}
-                >
-                  Clear my details
-                </button>
-              </div>
-            </form>
-
-            {canLog ? (
-              <p className="helper-note">
-                Your details only update your own profile for this date. The other person updates
-                theirs from their own login.
-              </p>
-            ) : (
-              <p className="helper-note">
-                Join a room with your saved profile to start logging arrival time, leaving time, and
-                weight.
-              </p>
-            )}
-
-            {dayDetailsError ? <p className="error-note">{dayDetailsError}</p> : null}
-
-            <div className="day-participant-list">
-              {selectedDayMemberSummaries.map((memberSummary) => (
-                <div
-                  key={memberSummary.key}
-                  className={`day-entry-card ${memberSummary.side}`}
-                >
-                  <p className="day-entry-name">{memberSummary.label}</p>
-                  {memberSummary.entry ? (
-                    <>
-                      <p>{memberSummary.entry.workedOut ? 'Workout logged' : 'No workout ticked'}</p>
-                      <p>
-                        Arrival:{' '}
-                        {memberSummary.entry.arrivalTime || 'Not logged'}
-                      </p>
-                      <p>
-                        Leaving:{' '}
-                        {memberSummary.entry.leaveTime || 'Not logged'}
-                      </p>
-                      <p>
-                        Weight:{' '}
-                        {memberSummary.entry.weightKg ? `${memberSummary.entry.weightKg} kg` : 'Not logged'}
-                      </p>
-                    </>
-                  ) : (
-                    <p>No details logged for this day yet.</p>
-                  )}
-                </div>
-              ))}
             </div>
-          </div>
+          </section>
+        </div>
 
-          <div className="panel-card info-card">
-            <p className="panel-kicker">How logging works</p>
-            <h3>Your profile updates only your side</h3>
-            <p className="panel-note">
-              There is no manual <strong>Both</strong> button anymore. Each person opens a date,
-              saves their own gym details from their own login, and the app combines those entries
-              automatically on the shared calendar.
-            </p>
-          </div>
-        </aside>
       </section>
     </main>
   );
