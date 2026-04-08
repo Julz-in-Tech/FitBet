@@ -24,8 +24,6 @@ const SIDE_OPTIONS = [
   { value: 'pink', label: 'Pink Side', emoji: '\uD83D\uDC96' },
   { value: 'blue', label: 'Blue Side', emoji: '\uD83D\uDC99' },
 ];
-const LOGIN_SHOWCASE_IMAGE =
-  'https://images.pexels.com/photos/6456335/pexels-photo-6456335.jpeg?auto=compress&cs=tinysrgb&w=1200';
 const HERO_SHOWCASE_IMAGE =
   'https://images.pexels.com/photos/3822726/pexels-photo-3822726.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
@@ -130,8 +128,8 @@ function normalizeCalendarData(raw) {
                 : '';
           const weightKg =
             rawWeight === '' ? '' : String(rawWeight);
-          const workedOut =
-            typeof checked.workedOut === 'boolean' ? checked.workedOut : checked === true;
+          const workedOut = 
+            typeof checked.workedOut === 'boolean' ? checked.workedOut : false;
 
           if (workedOut || arrivalTime || leaveTime || weightKg) {
             nextDay[uid] = {
@@ -277,7 +275,7 @@ function getSyncLabel(syncStatus) {
     case 'error':
       return 'Sync error';
     default:
-      return 'Create or join a room';
+      return 'Ready to log locally';
   }
 }
 
@@ -395,69 +393,18 @@ function AuthPage({
       <section className="auth-layout">
         <div
           className="auth-showcase"
-          style={{ '--auth-showcase-image': `url(${LOGIN_SHOWCASE_IMAGE})` }}
+          style={{ '--auth-showcase-image': `url(${HERO_SHOWCASE_IMAGE})` }}
         >
           <div className="auth-orb auth-orb-pink" aria-hidden="true" />
           <div className="auth-orb auth-orb-blue" aria-hidden="true" />
           <div className="auth-showcase-top">
             <p className="eyebrow">FIT BET</p>
-            <span className="auth-badge">Live on both phones</span>
           </div>
-          <h1>Log in and keep the bet live.</h1>
+          <h1>Keep the bet live.</h1>
+          <p className="auth-subcopy">Two accounts. One shared calendar.</p>
           <p className="auth-subcopy">
-            Each of you signs in from your own profile, joins the same room, and tracks workouts,
-            time spent, and weight progress on one shared board.
+            Log workouts, mark gym days, and compare Pink vs Blue in real time.
           </p>
-
-          <div className="auth-stat-row">
-            <article className="auth-stat-card">
-              <p className="auth-stat-value">R10</p>
-              <p className="auth-stat-label">per gym day</p>
-            </article>
-            <article className="auth-stat-card">
-              <p className="auth-stat-value">2</p>
-              <p className="auth-stat-label">personal profiles</p>
-            </article>
-            <article className="auth-stat-card">
-              <p className="auth-stat-value">1st</p>
-              <p className="auth-stat-label">winner alert day</p>
-            </article>
-          </div>
-
-          <div className="auth-preview-band">
-            <div className="auth-preview-chip pink">
-              <span className="auth-preview-dot" />
-              Pink logs her own progress
-            </div>
-            <div className="auth-preview-chip blue">
-              <span className="auth-preview-dot" />
-              Blue updates from his profile
-            </div>
-            <div className="auth-preview-chip both">
-              <span className="auth-preview-dot" />
-              Shared room keeps the board synced
-            </div>
-          </div>
-
-          <div className="auth-feature-list">
-            <article className="auth-feature-card auth-feature-card-pink">
-              <p className="panel-kicker">Shared score</p>
-              <h2>One room, two profiles</h2>
-              <p>Pink and Blue stay synced across both phones in the same Fit Bet room.</p>
-            </article>
-
-            <article className="auth-feature-card auth-feature-card-violet">
-              <p className="panel-kicker">Daily progress</p>
-              <h2>Track more than attendance</h2>
-              <p>Log arrival time, leaving time, workout days, and daily weight on your own side.</p>
-            </article>
-
-            <article className="auth-feature-card auth-feature-card-blue">
-              <p className="panel-kicker">Monthly stakes</p>
-              <h2>Winner alert included</h2>
-              <p>The app announces the previous month's winner on the first day of the new month.</p>
-            </article>
-          </div>
         </div>
 
         <section className="auth-card">
@@ -465,30 +412,16 @@ function AuthPage({
             <>
               <p className="panel-kicker">Setup needed</p>
               <h2>Add Firebase keys first</h2>
-              <p className="auth-card-copy">
-                This login page is ready, but the app still needs your Firebase web config in
-                <code> .env</code> before accounts can work.
-              </p>
-              <p className="helper-note">
-                After that, enable Email/Password sign-in in Firebase Authentication and reload the
-                app.
-              </p>
+              <p className="auth-card-copy">Add your Firebase web config in <code>.env</code>.</p>
             </>
           ) : authLoading ? (
             <>
               <p className="panel-kicker">Checking session</p>
               <h2>Getting your account ready</h2>
-              <p className="auth-card-copy">
-                Fit Bet is checking whether you already have an active login on this device.
-              </p>
+              <p className="auth-card-copy">Checking for an active login on this device.</p>
             </>
           ) : (
             <>
-              <div className="auth-card-pills">
-                <span className="auth-card-pill">Personal login</span>
-                <span className="auth-card-pill">Realtime room sync</span>
-              </div>
-
               <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
                 <button
                   type="button"
@@ -522,8 +455,8 @@ function AuthPage({
               </h2>
               <p className="auth-card-copy">
                 {authMode === 'signup'
-                  ? 'Create your account, choose your side, and then join the shared room code.'
-                  : 'Log in to your personal profile and continue updating your own gym record.'}
+                  ? 'Create your account and choose your side.'
+                  : 'Log in to your profile and keep logging right away.'}
               </p>
 
               <form className="stack-form auth-form" onSubmit={handleAuthSubmit}>
@@ -579,7 +512,11 @@ function AuthPage({
                       }
                       placeholder="Julia"
                     />
+                  </>
+                ) : null}
 
+                {authMode === 'signup' ? (
+                  <>
                     <span className="field-label">Choose your side</span>
                     <SidePicker
                       value={authForm.side}
@@ -591,7 +528,11 @@ function AuthPage({
                       }
                     />
                   </>
-                ) : null}
+                ) : (
+                  <p className="helper-note">
+                    Missing profiles default to pink so you can log straight away.
+                  </p>
+                )}
 
                 <div className="auth-submit-row">
                   <button type="submit" className="action-button primary" disabled={authBusy}>
@@ -605,8 +546,7 @@ function AuthPage({
               </form>
 
               <p className="helper-note">
-                Use one account per person. Email/Password must be enabled in Firebase
-                Authentication.
+                Use one account per person.
               </p>
               {authError ? <p className="error-note">{authError}</p> : null}
             </>
@@ -760,8 +700,80 @@ export default function App() {
     }));
   }, [authUser, profile?.displayName, profile?.side]);
 
+  const effectiveProfile = useMemo(() => {
+    if (!authUser) {
+      return null;
+    }
+
+    const displayName =
+      profile?.displayName?.trim() ||
+      authUser.displayName?.trim() ||
+      authUser.email?.split('@')[0] ||
+      '';
+
+    if (!displayName) {
+      return null;
+    }
+
+    return {
+      displayName,
+      side: profile?.side === 'blue' || profile?.side === 'pink' ? profile.side : 'pink',
+    };
+  }, [authUser, profile?.displayName, profile?.side]);
+
   useEffect(() => {
-    if (!firebaseEnabled || !db || !authUser || !profile?.displayName || !profile?.side || !roomCode) {
+    if (!firebaseEnabled || !db || !authUser || profileLoading || !effectiveProfile) {
+      return undefined;
+    }
+
+    if (profile?.displayName && profile?.side) {
+      return undefined;
+    }
+
+    const profileRef = doc(db, PROFILE_COLLECTION, authUser.uid);
+    let cancelled = false;
+
+    async function syncProfile() {
+      try {
+        await setDoc(
+          profileRef,
+          {
+            displayName: effectiveProfile.displayName,
+            side: effectiveProfile.side,
+            email: authUser.email ?? '',
+            ...(profile === null ? { createdAt: serverTimestamp() } : {}),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+
+        if (!cancelled) {
+          setProfileError('');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProfileError(getUserFacingError(error, 'We could not prepare your profile right now.'));
+        }
+      }
+    }
+
+    syncProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, db, effectiveProfile, profile, profileLoading]);
+
+  useEffect(() => {
+    if (
+      !firebaseEnabled ||
+      !db ||
+      !authUser ||
+      profileLoading ||
+      !effectiveProfile?.displayName ||
+      !effectiveProfile?.side ||
+      !roomCode
+    ) {
       setRoomHydrated(false);
       return undefined;
     }
@@ -776,7 +788,7 @@ export default function App() {
       roomRef,
       async (snapshot) => {
         try {
-          const memberPayload = buildMemberPayload(profile, authUser);
+          const memberPayload = buildMemberPayload(effectiveProfile, authUser);
 
           if (!snapshot.exists()) {
             const seedCalendar = calendarDataRef.current;
@@ -835,15 +847,24 @@ export default function App() {
     return () => {
       unsubscribe();
     };
-  }, [authUser, profile?.displayName, profile?.side, roomCode]);
+  }, [authUser, effectiveProfile, profileLoading, roomCode]);
 
   useEffect(() => {
-    if (!firebaseEnabled || !db || !authUser || !profile?.displayName || !profile?.side || !roomCode || !roomHydrated) {
+    if (
+      !firebaseEnabled ||
+      !db ||
+      !authUser ||
+      profileLoading ||
+      !effectiveProfile?.displayName ||
+      !effectiveProfile?.side ||
+      !roomCode ||
+      !roomHydrated
+    ) {
       return undefined;
     }
 
     const roomRef = doc(db, ROOM_COLLECTION, roomCode);
-    const memberPayload = buildMemberPayload(profile, authUser);
+    const memberPayload = buildMemberPayload(effectiveProfile, authUser);
     let cancelled = false;
 
     async function syncMemberProfile() {
@@ -875,10 +896,19 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [authUser, profile?.displayName, profile?.side, roomCode, roomHydrated]);
+  }, [authUser, effectiveProfile, profileLoading, roomCode, roomHydrated]);
 
   useEffect(() => {
-    if (!firebaseEnabled || !db || !authUser || !profile?.displayName || !profile?.side || !roomCode || !roomHydrated) {
+    if (
+      !firebaseEnabled ||
+      !db ||
+      !authUser ||
+      profileLoading ||
+      !effectiveProfile?.displayName ||
+      !effectiveProfile?.side ||
+      !roomCode ||
+      !roomHydrated
+    ) {
       return undefined;
     }
 
@@ -923,17 +953,17 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [authUser, calendarData, profile?.displayName, profile?.side, roomCode, roomHydrated]);
+  }, [authUser, calendarData, effectiveProfile, profileLoading, roomCode, roomHydrated]);
 
   const resolvedMembers = useMemo(() => {
     const nextMembers = { ...roomMembers };
 
-    if (authUser && profile?.displayName && profile?.side) {
-      nextMembers[authUser.uid] = buildMemberPayload(profile, authUser);
+    if (authUser && effectiveProfile?.displayName && effectiveProfile?.side) {
+      nextMembers[authUser.uid] = buildMemberPayload(effectiveProfile, authUser);
     }
 
     return nextMembers;
-  }, [authUser, profile?.displayName, profile?.side, roomMembers]);
+  }, [authUser, effectiveProfile, roomMembers]);
 
   const pinkMember = useMemo(
     () => Object.values(resolvedMembers).find((member) => member.side === 'pink') ?? null,
@@ -946,8 +976,11 @@ export default function App() {
   const monthKey = formatMonthKey(viewDate);
   const monthEntries = calendarData[monthKey] ?? {};
   const calendarDays = useMemo(() => createCalendarDays(viewDate), [viewDate]);
-  const profileReady = Boolean(profile?.displayName && (profile?.side === 'pink' || profile?.side === 'blue'));
-  const canLog = Boolean(authUser && profileReady && roomCode && roomHydrated);
+  const profileReady = Boolean(
+    effectiveProfile?.displayName &&
+      (effectiveProfile?.side === 'pink' || effectiveProfile?.side === 'blue'),
+  );
+  const canLog = Boolean(authUser && profileReady);
   const pinkDisplayName = pinkMember?.displayName ?? 'Pink Side';
   const blueDisplayName = blueMember?.displayName ?? 'Blue Side';
   const selectedDayKey = padDay(selectedDay);
@@ -1341,7 +1374,7 @@ export default function App() {
     event.preventDefault();
 
     if (!canLog || !authUser) {
-      setDayDetailsError('Sign in, save your profile, and join a room before logging day details.');
+      setDayDetailsError('Sign in and save your profile first.');
       return;
     }
 
@@ -1350,18 +1383,33 @@ export default function App() {
       return;
     }
 
-    setDayDetailsBusy(true);
+    const shouldAwaitRemoteSave = Boolean(roomCode && roomHydrated && !profileLoading);
+
+    if (shouldAwaitRemoteSave) {
+      setDayDetailsBusy(true);
+    }
+
     setDayDetailsError('');
 
     const dayKey = selectedDayKey;
+    const weightValue = String(dayDetailsForm.weightKg || '').trim();
+    
     const nextEntry = {
       workedOut: dayDetailsForm.workedOut,
       arrivalTime: dayDetailsForm.arrivalTime,
       leaveTime: dayDetailsForm.leaveTime,
-      weightKg: dayDetailsForm.weightKg.trim(),
+      weightKg: weightValue,
     };
+
+    if (JSON.stringify(nextEntry) === JSON.stringify(currentUserEntry)) {
+      if (shouldAwaitRemoteSave) {
+        setDayDetailsBusy(false);
+      }
+      return;
+    }
+
     const shouldKeepEntry =
-      nextEntry.workedOut || nextEntry.arrivalTime || nextEntry.leaveTime || nextEntry.weightKg;
+      nextEntry.workedOut || nextEntry.arrivalTime || nextEntry.leaveTime || weightValue !== '';
 
     setCalendarData((current) => {
       const currentMonth = { ...(current[monthKey] ?? {}) };
@@ -1390,6 +1438,10 @@ export default function App() {
       delete nextCalendar[monthKey];
       return nextCalendar;
     });
+
+    if (!shouldAwaitRemoteSave) {
+      setDayDetailsBusy(false);
+    }
   }
 
   if (!authUser) {
@@ -1891,15 +1943,15 @@ export default function App() {
                 </div>
               </form>
 
-              {canLog ? (
+              {roomCode ? (
                 <p className="helper-note">
                   Your details only update your own profile for this date. The other person updates
                   theirs from their own login.
                 </p>
               ) : (
                 <p className="helper-note">
-                  Join a room with your saved profile to start logging arrival time, leaving time, and
-                  weight.
+                  You can log on this phone right away. Create or join a room whenever you want the
+                  entries synced to both phones.
                 </p>
               )}
 
